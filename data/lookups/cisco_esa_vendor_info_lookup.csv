@@ -1,0 +1,7 @@
+sourcetype,vendor,product,app
+cisco:esa:syslog,Cisco,ESA,Ironport
+cisco:esa:textmail,Cisco,ESA,Ironport
+cisco:esa:delivery,Cisco,ESA,Cisco Email Security Appliance
+cisco:esa:authentication,Cisco,ESA,Cisco Email Security Appliance
+cisco:esa:http,Cisco,ESA,http
+cisco:esa:amp,Cisco,ESA,amp

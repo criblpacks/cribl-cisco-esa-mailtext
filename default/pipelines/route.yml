@@ -1,0 +1,12 @@
+id: default
+groups: {}
+routes:
+  - id: default
+    name: Cisco ESA
+    final: true
+    disabled: false
+    pipeline: Cisco_ESA_mailtext
+    description: ""
+    clones: []
+    filter: "true"
+    output: default

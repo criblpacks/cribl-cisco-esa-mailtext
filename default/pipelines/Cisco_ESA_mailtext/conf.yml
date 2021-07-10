@@ -1,0 +1,274 @@
+output: default
+groups:
+  aTyB5o:
+    name: Extractions grouped by ESA log data fields. Turn on/off as needed
+    index: 1
+asyncFuncTimeout: 1000
+functions:
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: >
+        Description: This pipeline main focus is to  create extensive regex
+        extraction for Cisco ESA. A reduction functions (drop) are suggested at
+        the end of pipeline.
+
+        Vendor: Cisco ESA Version: 7.6.3-019
+
+        Author: Mo Hassan 6/28/2021
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /(?:MID\s+\d+\s+rewritten\s+to\s+)?MID\s+(?<internal_message_id>\d+)/
+      regexList:
+        - regex: /MID\s+(?<MID>\d+)/gm
+        - regex: /DCID\s+(?<DCID>\d+)/gm
+        - regex: /ICID\s+(?<ICID>\d+)/gm
+        - regex: / RCID\s+(?<RCID>\d+)/gm
+        - regex: /RID\s+\[?(?<RID>\d+(?:\s*,\s*\d+)*)/gm
+        - regex: /\w+:\s+New\s(?<protocol>\w+)\s(?:DCID|ICID)/gm
+        - regex: /[f|F]rom(?:\s*:)?\s*<(?<src_user>[^>]*)>/gm
+        - regex: /To\s*:\s*<(?<recipient>[^>]*)>/gm
+        - regex: /Message-ID\s*'(?<message_id>[^']*)'/gm
+        - regex: /[Ss]subject\s+['|"](?<message_subject>.*)['|"]/gm
+        - regex: /A (?<alert_category>\w+)\/(?<alert_level>\w+) alert was sent to
+            (?<alert_recipient>[^\s]+@[^\s]+) with
+            subject\s+['"](?<alert_subject>.*)['"]/gm
+        - regex: /ready\s+(?<message_size>\d+)\s+bytes/gm
+        - regex: /[Aa]ttachment(?:\(s\))?[^s]\s*:?\s*(?:([^.'"]+(?:\.(\w+))?)|["'](?<file_name>[^.]+(?:\.(?<attachment_type>\w+))?)["'])(?:.+?[\.\s]*)?$/gm
+        - regex: /ICID\s+\d+\s+interface[^\(]+\((?<dest_ip>[^\)]+)\)\saddress\s+(?<src_ip>[^\s]+)\sreverse\sdns\shost\s(?<src_host>[^\s]+)\sverified/gm
+        - regex: /
+            DCID\s+\d+\s+interface\s(?<src_ip>[^\s]+)\saddress\s+(?<dest_ip>[^\s]+)\s+port\s+(?<dest_port>\d+)/gm
+        - regex: /(?:IronPort\s+Spam\s+(?<vendor_action>Quarantine)|\w+:\s*(Message
+            done|Bounced|Quarantined|Delayed|Message aborted|Double
+            bounce).+?MID)/gm
+    groupId: aTyB5o
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "##Authentication field extractions"
+    groupId: aTyB5o
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /uU]ser\s+(?<user>\w+)\s*(?:from)?\s+(?<src_ip>\d+\.+\d+\.+\d+\.+\d+)?.*\s*(?<vendor_action>failed|successfully)(?:.*(?:\s*(?:logged\s+on\s+from)\s+(?<src_ip2>\d+\.+\d+\.+\d+\.+\d+)))?/gm
+      regexList:
+        - regex: /[uU]ser\s*:\s*(?<user>.*)\s*[Ss]ession\s*:?\s*(?<session_id>\S+)/gm
+        - regex: /\d{1,2}:\d{1,2}:\d{1,2}(?:\s\d{1,4})?\s(?<log_level>\w+):\s*(login|logout):\s*(?<vendor_action>[^\s]*)\s*[Uu]ser:(?:[\w\-]+)\s*session:(?<session>[^\s]+)/gm
+    groupId: aTyB5o
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "#Syslog field extractions "
+    groupId: aTyB5o
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /
+        (?:\w{3}\s+)?\w{3}\s+\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2}\s+(?:\d{4}\s+)?(?:(?<source_domain>[^:\s]+)\s+)?(?:(?<log_type>[^\s]+):\s+)?(?<log_level>Info|Warning|Alert|Debug):/gm
+    groupId: aTyB5o
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf: {}
+    groupId: aTyB5o
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /(?<vendor_action>Connection
+        Error):\s+DCID[:]?\s\d+\s+domain:\s+(?<src_domain>[^\s]+)\s+IP:\s+(?<src_ip>\S+)\s+port:\s+(?<src_port>\d+).*interface:\s+(?<dest_ip>\S+)\s+reason:\s+(?<reason>.*)/gm
+      regexList:
+        - regex: /(?:DCID|ICID)\s+\d+\s+(?<vendor_action>TLS success|TLS
+            failed)(?:\s+protocol\s+(?<protocol>\S+)\s+cipher\s+(?<cipher>\S*))?.*$/gm
+        - regex: /(?<vendor_action>DNS Error|DNS Temporary
+            Failure)\s+(?<domain_dest>[^\s]+)/gm
+        - regex: / (?<vendor_action>DNS
+            failure)\s+for\s+SMTP\s+route\s+destination\s+(?<domain_dest>[^\s]+)/gm
+        - regex: /ICID\s+\d+\s+(?<vendor_action>TCPREFUSE|ACCEPT|REJECT|RELAY)\s+SG\s+(?<SG>\w+)\s+match\s+(?<match>.*)\s+SBRS\s+(?<SBRS>.*)/gm
+        - regex: /(?<vendor_action>Dropping
+            connection)\s+due\s+to\s+(?<reason>.*)\s+from\s+host\s*=\s*\(['"]?(?<src_ip>[^\s'",]+)['"]?\s*,\s+['"]?(?<src_host>[^\s]+)['"]\),\s*.*sender_group\s*=\s*(?<sender_group>.*),\s*listener\s*=\s*(?<listener>.*),\s*reverse_dns\s*=\s*(?<reverse_dns>\S+),/gm
+        - regex: /ICID\s+\d+\s+[aA]ddress:\s+<(?<message_id>[^>]+)>\s+(?<vendor_action>sender
+            rejected),\s+(?<reason>.*)/gm
+        - regex: /
+            ICID\s+\d+\s+To\s*:\s*<(?<recipent>[^>]+)>\s+(?<vendor_action>Rejected)\s+by\s+(?<reason>.*)/gm
+        - regex: /
+            ICID\s+\d+\s+(?<vendor_action>[rR]eceiving\s+Failed):\s+(?<reason>.*)/gm
+        - regex: /MID\s+\d+\s+(?<signature_type>DKIM|DomainKeys):\s+sign(?:ed|ing)\s+with\s+(?<signature>\S+)(?:\s+\-\s+matches\s+(?<message_id>.*))?/gm
+        - regex: /MID\s+\d+\s+[oO]utbreak\s+[fF]ilters:\s+verdict\s+(?<outbreak_filter_status>positive|negative)/gm
+        - regex: /(?:Outbreak\s+Rule:\s+(?<outbreak_rule>\w+)\s+has\s+)?[Tt]hreat\s+[Ll]evel\s*\=?\s*(?<threat_level>\d+)/gm
+        - regex: /
+            MID\s+\d+\s+[tT]hreat\s+[lL]evel\s*=\s*\d+\s+[cC]ategory\s*=\s*(?<threat_category>.*)\s+[tT]ype\s*=\s*(?<threat_type>.*)/gm
+        - regex: /antivirus\s+(?<antivirus_status>negative|positive|encrypted|repaired|unscannable)(?:\s['"](?<virus_vendor_category>.*)['"])?/gm
+        - regex: /spam\s+(?<spam_status>negative|positive|suspect)/gm
+        - regex: /(?<vendor_action>quarantined)\s+to\s+"(?<quarantine_dest>[^"]+)"\s+\((?<reason>.*)\)/gm
+        - regex: /(?<vendor_action>released)\s+from\s+(?:all\s+)?quarantine/gm
+        - regex: /MID\s+\d+:\s+(?<vendor_action>scanning\s+error)\s+\(name\s*=\s*['"](?<file_name>[^'"]+)['"],\s+type=(?<file_type>.*)\):\s+(?<reason>.*)/gm
+        - regex: / [mM]essage\s+finished\s+MID\s+\d+\s+(?<vendor_action>\w+)/gm
+    groupId: aTyB5o
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "##AMP Field Extractions"
+    groupId: aTyB5o
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /[vV]ersion:\s+(?<vendor_ver>.*)\s+SN:\s+(?<vendor_sn>.*)/gm
+      regexList:
+        - regex: /MID\s+(?<prev_interna_message_id>\d+)\s+(?<vendor_action>rewritten)\s+to\s+(?:MID)?\s*(?<pinternal_message_id>\d+)\s+by\s+(?<reason>.*)/gm
+        - regex: /MID\s+(?<internal_message_id>\d+)\s+was\s+(?<vendor_action>generated)\s+for\s+(?<reason>bounce)\s+of\s+MID\s+(?<prev_internal_message_id>\d+)/gm
+        - regex: /MID\s+(?<prev_internal_message_id>\d+)\s+was\s+(?<vendor_action>split)\s+creating\s+MID\s+(?<internal_message_id>\d+)\s+due\s+to\s+(?<reason>.*)/gm
+        - regex: /SBRS\s+[a-zA-Z0-9_.-]*\s+country\s+(?<country>.*)/gm
+        - regex: /Time\s+offset\s+from\s+UTC:\s+(?<utc_offset>.*)\s+seconds/gm
+        - regex: /IP\s+(?<src_ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+being\s+used\,\s+SBRS\s+(?<ender_reputation>[a-zA-Z0-9_.-]*)/gm
+        - regex: /(?:GRAYMAIL|graymail)\s+(?<graymail_status>\w+)/gm
+    groupId: aTyB5o
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /(?<vendor_action>Response received for file reputation query from
+        [a-zA-Z]*).\s+[fF]ile\s+Name\s*=\s*['"](?<ile_name>[^'"]+)['"],\s+MID\s*=\s*(?<internal_message_id>\d+),\s+[dD]isposition\s*=\s*(?<disposition>[^,]*),\s+[mM]alware\s*=\s*(?<malware>[^,]*),\s*[rR]eputation\s+Score\s*=\s*(?<reputation_score>\d+),\s+[sS]ha256\s*=\s*(?<sha256>[^,]*),\s+[uU]pload_action\s+=\s+(?<upload_action>\d+)/gm
+      regexList:
+        - regex: /(?<vendor_action>File Analysis
+            complete.)\s+SHA256:\s*(?<sha256>[^,]*),\s+[fF]ile\s+[nN]ame:\s*(?<file_name>[^,]*),\s+Submit\sTimestamp:\s*\d+,\s+Update\s+Timestamp:\s*\d+,\s+Disposition:\s*(?<disposition>\d+)\s+Score:\s*(?<analysis_score>\d+),\s+(?:[aA]nalysis\s+id|run_id):\s+(?<id>['"][^'"]+['"]|\d+)\s+Details:\s+(?<details>[\w
+            [\]]+)\s+Spyname:\s*\[(?<malware>.*)]/gm
+        - regex: /(?<vendor_action>File Analysis
+            complete.)\s+SHA256:\s*(?<sha256>[^,]*),\s+[fF]ile\s+[nN]ame:\s*(File
+            reputation query
+            initiating.)\s+[fF]ile\s+[nN]ame\s*=\s*'(?<file_name>.+)',\s*MID\s*=\s*(?<internal_message_id>\d+),\s*[Ff]ile\s+[Ss]ize\s*=\s*(?<file_size>.+),\s*[Ff]ile\s+[Ty]ype\s*=\s*(?<file_type>.+)/gm
+        - regex: /(?<vendor_action>File not uploaded for
+            analysis.)\s*MID\s*=\s*(?<internal_message_id>\d+)\s*File\s*SHA256\[(?<sha256>[^\]]+)\]\s*[Ff]ile\s+[Mm]ime\[(?<file_mime>[^\]]+)\]\s*[Rr]eason:(?<reason>.+)/gm
+        - regex: /(?<vendor_action>File uploaded for
+            analysis.)\s*SHA256:(?<sha256>.+),\s*[Ff]ile\s*[Nn]ame\s*:\s*(?<ile_name>.+)/gm
+        - regex: /(?<vendor_action>File analysis upload
+            skipped.)\s*SHA256:(?<ha256>.+),\s*[Ff]ile\s*[Nn]ame\s*:\s*(?<file_name>.+\.\w+)\s*[Tt]imestamp\[(?<timestamp>[^\]]+)\]\s*details(?<detals>.+)/gm
+        - regex: /[[Ff]ile.+[Ff]ile\s*[Mm]ime\[(?<file_mime>[^\]]+)\]/gm
+        - regex: /(?<vendor_action>Retrospective verdict
+            received.)\s*SHA256:(?<sha256>.+),\s*[Tt]imestamp\s*:\s*(?<imestamp>.+),\s*Verdict\s*:\s*(?<verdict>.+),\s*[Rr]eputation\s*[Ss]core\s*:\s*(?<eputation_score>\d+),\s*[Ss]pyname\s*:\s*(?<malware>.+)/gm
+        - regex: /DCID\s+\d+\s+interface\s(?<src_ip>[^\s]+)\saddress\s+(?<dest_ip>[^\s]+)/gm
+        - regex: /= ICID\s+\d+\s+SBRS\s+(?<sender_reputation>.*)/gm
+        - regex: /MID\s+\d+\,\s*(?<message_info>Message\sScanning\sProblem\s*:.+)/gm
+        - regex: / filter\s*'(?<filter>.+?)'/gm
+        - regex: /policy\s*(?<policy>[^(?:is\s*)]\w+)/gm
+        - regex: /Error\s*:\s*(?<error_message>.+)/gm
+        - regex: /URL\s*:?\s*(?<URL>https?:[^\s]+)/gm
+        - regex: /has\s*been\s*expanded\s*to\s*(?<expanded_URL>https?:[^\s]+)/gm
+        - regex: /reverse\sDNS\shost\s*:\s*(?<reverse_dns_host>[^,]+),.*env-from\s*:\s*(?<env_from>[^,]+),\s*header-from\s*:\s*(header_from[^,]+),\s*reply-to\s*:\s*(reply_to[^\s]+)/gm
+        - regex: /DKIM:.*\(d\s*=\s*(?<domain>\S+)\ss\s*=\s*(?<selector>\S+)/gm
+        - regex: /DMARC\s*:\s*Message\sfrom\sdomain\s(?<domain>[^\s,]+)\s*,\s*DMARC.*\(\s*SPF\saligned\s(?<SPF_aligned>[^\s,]+)\s*,\s*DKIM\saligned\s(?<DKIM_aligned>[^\s\)]+)\s*\)/gm
+        - regex: /
+            SenderBase\supload\s*:\s*(?<num_of_hosts>\d+)\shosts\stotaling\s(?<total_bytes>\d+)
+            bytes/gm
+        - regex: /
+            hits\s*=\s*(?<hits>\d+)\s*,\s*misses\s*=\s*(?<misses>\d+)\s*,\s*expires\s*=\s*(?<expires>\d+)\s*,\s*adds\s*=\s*(?<adds>\d+),\s*seconds\ssaved\s*=\s*(?<seconds_saved>\d*\.?\d*),\s*total\sseconds\s*=\s*(?<total_seconds>\d*\.?\d*)/gm
+        - regex: / SPF\s*:.*\(v\s*=\s*(?<SPF_version>[^\)\s]+)\s*\)/gm
+        - regex: / \(\'message-id\'.\s*\'(?:[\\r|\\n|\s]*)<(?<message_id>\S+)>/gm
+        - regex: /from\',\s*\'(?<from>[^\']+)/gm
+        - regex: /ontent-type\',\s*\'(?<content_type>[^\']+)/gm
+        - regex: /reply-to(?:\',\s*\'(?<reply_to>[^\']+)|\:\s*(?<reply_to_2>[^,]+))/gm
+        - regex: / [rR]eputation\s*(?<reputation_score>\-?\d+(?:\.\d+)?)/gm
+        - regex: /[rR]eason\s*:\s*(?<reason>.+)/gm
+    groupId: aTyB5o
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "##Cisco ESA CEF"
+    groupId: aTyB5o
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /cs4\s*=\s*['"]?\<?\s*(?<internal_message_id>[^\s\>'"]+)/gm
+      regexList:
+        - regex: /(?<cef_6_header>CEF:(?<cef_format_version>\d+)\|(?<appliance_vendor>[^|]*)\|(?<appliance_product>[^|]*)\|(?<appliance_version>[^|]*)\|(?<event_class_id>[^|]*)\|(?<event_name>[^|]*)\|(?<severity>[^|]*)\|)(?<extend_part_1>.*)/gm
+    groupId: aTyB5o
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "## ESA Bounce"
+    groupId: aTyB5o
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /(?<bounce_type>Bounced|Delayed)\:\s*(?<MID>\d+)\:(?<RID>\d+)\s*From\:\<(?<sender>\S+)\>\s+To\:<(?<recipient>\S+)\>/gm
+      regexList:
+        - regex: /Message-Id\:\n*<(?<internal_message_id>\S+)>/gm
+        - regex: /name\:\s*(?<user>\w+)/gm
+        - regex: /subject\:\n*(?<subject>.*)/gm
+    groupId: aTyB5o
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "## Drop events with negative antivirus result"
+  - id: drop
+    filter: antivirus_status=='negative' || _raw.match(/Start
+      MID/)||_raw.match(/Message finished MID/)
+    disabled: false
+    conf: {}
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "## Drop events with negative spam status"
+  - id: drop
+    filter: spam_status == 'negative'
+    disabled: true
+    conf: {}
+  - id: aggregation
+    filter: "true"
+    disabled: true
+    conf:
+      passthrough: false
+      preserveGroupBys: false
+      sufficientStatsOnly: false
+      metricsMode: false
+      timeWindow: 10s
+      aggregations:
+        - values(MID).as(MID)
+      cumulative: false
+  - id: eval
+    filter: "true"
+    disabled: true
+    conf:
+      add:
+        - name: _raw
+          value: MID.join('\n')
+description: Cisco ESA mailtext log fields extraction & reduction use case

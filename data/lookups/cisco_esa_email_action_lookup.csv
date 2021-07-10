@@ -1,0 +1,30 @@
+vendor_action,action
+Message done,delivered
+Bounced,blocked
+Double bounce,blocked
+Quarantined,quarantined
+Quarantine,quarantined
+Message aborted,blocked
+Delayed,deferred
+Release,delivered
+Connection Error,blocked
+TLS failed,blocked
+TLS success,allowed
+DNS Error,blocked
+DNS Temporary Failure,blocked
+DNS failure,blocked
+ACCEPT,allowed
+REJECT,blocked
+RELAY,allowed
+TCPREFUSE,blocked
+Dropping connection,blocked
+sender rejected,blocked
+receive_failed,blocked
+recipient_rejected,blocked
+released,allowed
+file_scan_error,blocked
+done,delivered
+aborted,blocked
+mid_rewritten,allowed
+mid_generated,allowed
+mid_split,allowed

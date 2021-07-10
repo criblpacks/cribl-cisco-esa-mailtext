@@ -1,0 +1,5 @@
+vendor_action,action
+successfully,success
+failed,failure
+login,success
+logout,success
